@@ -14,19 +14,21 @@ class Program
         var squareAreas = FindLargestSquarePart1(tiles);
         squareAreas = squareAreas.OrderByDescending(c => c.Value).ToDictionary();
         Console.WriteLine("Part 1: " + squareAreas.ElementAt(0).Value);
-
-        (tiles, squareAreas) = CompressTiles(tiles, squareAreas);
+        //Only compress if were massive. Otherwise, it doesn't work.
+        if(tiles.Max(c => c.X) > 1000)
+            (tiles, squareAreas) = CompressTiles(tiles, squareAreas);
 
         var maxArea = FindLargestSquarePart2(tiles, squareAreas);
         Console.WriteLine("Part 2: " + maxArea);
     }
 
-    //4621384368 too high
-
     static (Point[] compressTiles, Dictionary<Tuple<Point, Point>, long>) CompressTiles(Point[] tiles, Dictionary<Tuple<Point, Point>, long> squares)
     {
-        var xMap = tiles.Select(t => t.X).Distinct().OrderBy(x => x).Select((v, i) => new { Value = v, Index = i }).ToDictionary(c => c.Value, c => c.Index);
-        var yMap = tiles.Select(t => t.Y).Distinct().OrderBy(y => y).Select((v, i) => new { Value = v, Index = i }).ToDictionary(c => c.Value, c => c.Index); ;
+        var uniqueX = tiles.Select(t => t.X).Distinct().OrderBy(x => x);
+        var uniqueY = tiles.Select(t => t.Y).Distinct().OrderBy(y => y);
+
+        var xMap = uniqueX.Select((v, i)=> new{Value = v, index = i}).ToDictionary(c => c.Value, c=> c.index);
+        var yMap = uniqueY.Select((v, i)=> new{Value = v, index = i}).ToDictionary(c => c.Value, c=> c.index);
 
         var newTiles = tiles.Select(t => new Point(xMap[t.X], yMap[t.Y])).ToArray();
         var newSquares = squares.ToDictionary(c => new Tuple<Point, Point>(new Point(xMap[c.Key.Item1.X], yMap[c.Key.Item1.Y]), new Point(xMap[c.Key.Item2.X], yMap[c.Key.Item2.Y])), c => c.Value);
@@ -36,14 +38,13 @@ class Program
 
     static Dictionary<Tuple<Point, Point>, long> FindLargestSquarePart1(Point[] tiles)
     {
-        Dictionary<Tuple<Point, Point>, long> squares = new Dictionary<Tuple<Point, Point>, long>();
+        Dictionary<Tuple<Point, Point>, long> squares = [];
         for (int i = 0; i < tiles.Length - 1; i++)
         {
             for (int n = 1; n < tiles.Length; n++)
             {
                 var p1 = tiles[i];
                 var p2 = tiles[n];
-
 
                 var area = (Math.Abs(p1.X - p2.X) + 1L) * (Math.Abs(p1.Y - p2.Y) + 1L);
                 squares.Add(new Tuple<Point, Point>(p1, p2), area);
@@ -87,66 +88,16 @@ class Program
 
             for(int x = minX + 1; x < maxX; x++)
             {
-                if(edges.Contains(new Point(x, minY + 1)) || edges.Contains(new Point(x, minY - 1)))
+                if(edges.Contains(new Point(x, minY + 1)) || edges.Contains(new Point(x, maxY - 1)))
                     return false;
             }
             for(int y = minY + 1; y < maxY; y++)
             {
-                if(edges.Contains(new Point(y, minX + 1)) || edges.Contains(new Point(y, minX - 1)))
+                if(edges.Contains(new Point(minX + 1, y)) || edges.Contains(new Point(maxX - 1, y)))
                     return false;
             }
         }
         return true;
-    }
-
-    static Dictionary<Point, bool> ColoredMem = new Dictionary<Point, bool>();
-    static bool IsColoredSquare(Point[] tiles, Point toCheck, int xBoundmin, int xBoundmax, int yboundmin, int yboundmax)
-    {
-        if (ColoredMem.TryGetValue(toCheck, out bool value))
-        {
-            return value;
-        }
-
-        var between = 0;
-        var tilesHit = 0;
-        for (int i = toCheck.X - 1; i >= 0; i--)
-        {
-            var newCheck = new Point(i, toCheck.Y);
-            var tileIndex = Array.IndexOf(tiles, newCheck);
-            if (tileIndex >= 0)
-            {
-                if (newCheck.Y == yboundmin || newCheck.Y == yboundmax)
-                {
-                    ColoredMem.Add(toCheck, false);
-                    return false;
-                }
-
-                between++;
-                var nextTile = tiles[(tileIndex + 1) % tiles.Length];
-
-
-
-                if (nextTile.Y == toCheck.Y && i > nextTile.X)
-                    i = nextTile.X;
-                var prevTile = tiles[(tileIndex - 1) % tiles.Length];
-                if (prevTile.Y == toCheck.Y && i > prevTile.X)
-                    i = prevTile.X;
-
-            }
-            else if (BetweenTwoPoints(tiles, new Point(i, toCheck.Y)))
-            {
-                between++;
-            }
-
-        }
-        if (between % 2 != 0 || (toCheck.X == xBoundmin && BetweenTwoPoints(tiles, toCheck)))
-        {
-            ColoredMem.Add(toCheck, true);
-            return true;
-        }
-
-        ColoredMem.Add(toCheck, false);
-        return false;
     }
 
     static HashSet<Point> GetEdges(Point[] tiles)
@@ -178,35 +129,6 @@ class Program
             }
         }
         return edges;
-    }
-
-    static Dictionary<Point, bool> BetweenMem = new Dictionary<Point, bool>();
-    static bool BetweenTwoPoints(Point[] tiles, Point between)
-    {
-        if (BetweenMem.TryGetValue(between, out bool value))
-        {
-            return value;
-        }
-
-        for (int i = 0; i < tiles.Length; i++)
-        {
-            var t1 = tiles[i];
-            var t2 = tiles[(i + 1) % tiles.Length];
-
-            if (t1.X != between.X || t2.X != between.X) continue;
-
-            var maxY = Math.Max(t1.Y, t2.Y);
-            var minY = Math.Min(t1.Y, t2.Y);
-
-            if (between.Y >= minY && between.Y <= maxY)
-            {
-                BetweenMem.Add(between, true);
-                return true;
-            }
-        }
-
-        BetweenMem.Add(between, false);
-        return false;
     }
 
     static Point[] ParseInput(string[] input)
