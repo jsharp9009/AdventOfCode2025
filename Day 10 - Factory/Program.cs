@@ -62,8 +62,10 @@ class Program
             .Where(j => j.Value > 0)
             .ToList();
 
-        var next = nonZeroJoltages.OrderBy(t => buttons.Select((b, i)=> (Index: i, Button: b))
-        .Count(b => IsButtonAvailable(b.Index, mask) && b.Button.Contains(t.Index)))
+        var next = nonZeroJoltages.OrderBy(
+            t => buttons.Select((b, i)=> (Index: i, Button: b))
+            .Count(b => IsButtonAvailable(b.Index, mask) && b.Button.Contains(t.Index))
+        )
         .ThenByDescending(t => t.Value).First();
 
         int countToReduce = next.Index;
@@ -96,7 +98,7 @@ class Program
 
                     foreach(var p in matchingButtons[i].Button)
                     {
-                        if(newJ[p] > count)
+                        if(newJ[p] >= count)
                             newJ[p] -= count;
                         else
                         {
@@ -111,13 +113,13 @@ class Program
                     if(r != int.MaxValue)
                         best = Math.Min(best, minValue + r);
                 }
-            }while(NextCombination(counts));
+            }while(NextCombination(ref counts));
         }
 
         return best;
     }
 
-    static bool NextCombination(int[] combination)
+    static bool NextCombination(ref int[] combination)
     {
         var i = Array.FindLastIndex(combination, v => v != 0);
         if(i <= 0) return false;
